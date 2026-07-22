@@ -92,12 +92,14 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg2
 .filter-select:focus{border-color:#1B6EE4}
 .filter-count{font-size:11px;color:var(--text3);margin-left:auto}
 .tx-table-wrap{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:12px}
-.tx-table-head{display:grid;grid-template-columns:80px 1fr 1fr 90px 100px 56px;gap:0;border-bottom:1px solid var(--border);background:var(--bg2)}
+.tx-table-head{display:grid;grid-template-columns:80px 1fr 1fr 90px 100px 64px 52px;gap:0;border-bottom:1px solid var(--border);background:var(--bg2)}
 .tx-th{padding:9px 14px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;transition:color .12s}
 .tx-th:hover{color:var(--text)}
 .tx-th.sorted{color:var(--text)}
 .sort-arrow{font-size:9px;opacity:.5}.sort-arrow.on{opacity:1}
-.tx-table-body .entry-row{display:grid;grid-template-columns:80px 1fr 1fr 90px 100px 56px;gap:0;padding:0;border-bottom:1px solid var(--border);align-items:stretch}
+.tx-table-body .entry-row{display:grid;grid-template-columns:80px 1fr 1fr 90px 100px 64px 52px;gap:0;padding:0;border-bottom:1px solid var(--border);align-items:stretch}
+.tx-cell-acts{display:flex;align-items:center;justify-content:center;gap:2px;opacity:0;transition:opacity .15s}
+.entry-row:hover .tx-cell-acts{opacity:1}
 .tx-table-body .entry-row:last-child{border-bottom:none}
 .tx-cell{padding:11px 14px;font-size:12px;display:flex;align-items:center;min-width:0;overflow:hidden}
 .tx-cell-date{color:var(--text2);font-variant-numeric:tabular-nums;font-size:11px}
@@ -1116,6 +1118,7 @@ function renderSummary(){
       <div class="tx-th">Person</div>
       <div class="tx-th">Bank</div>
       <div class="tx-th${txSortCol==='amount'?' sorted':''}" onclick="sortTx('amount')" style="justify-content:flex-end">Amount ${sortIcon('amount')}</div>
+      <div class="tx-th"></div>
     </div>
     <div class="tx-table-body" id="tx-body"></div>
   </div>`;
@@ -1165,34 +1168,19 @@ function renderTxRows(expenses){
       <div class="tx-cell" style="font-size:11px">${personStr}</div>
       <div class="tx-cell" style="font-size:11px;color:var(--text2)">${bankLabel}</div>
       <div class="tx-cell tx-cell-amt">${sym}${fmt(e.amount)}</div>
+      <div class="tx-cell tx-cell-acts">
+        <button class="act-btn" onclick="startEdit(${e.id})" title="Edit"><svg viewBox="0 0 16 16"><path d="M11.5 2.5a1.414 1.414 0 012 2L5 13H3v-2L11.5 2.5z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></button>
+        <button class="act-btn del" onclick="confirmDel(${e.id})" title="Delete"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="3 5 13 5"/><path d="M6 5V3h4v2M6 8v4M10 8v4"/><rect x="4" y="5" width="8" height="9" rx="1"/></svg></button>
+      </div>
     `;
 
-    // Edit + delete inline rows (appended as siblings inside the body wrapper)
     const delRow=document.createElement('div');
     delRow.className='entry-del-confirm';delRow.id='dc-'+e.id;
-    delRow.style.cssText='display:none;grid-column:1/-1;align-items:center;justify-content:space-between;padding:11px 16px;font-size:13px;background:var(--red-bg);border-bottom:1px solid rgba(232,71,42,.15);color:var(--red-text)';
     delRow.innerHTML=`<span>Delete this entry?</span><div class="del-btns"><button class="del-no" onclick="cancelDel(${e.id})">Cancel</button><button class="del-yes" onclick="doDelete(${e.id})">Delete</button></div>`;
 
     const editRow=document.createElement('div');
     editRow.className='entry-edit';editRow.id='ee-'+e.id;
     editRow.innerHTML=`<div class="edit-grid"><div><div class="field-label" style="font-size:10px;margin-bottom:5px">Amount</div><input class="edit-input" type="number" id="ea-${e.id}" value="${e.amount}" step="0.01" min="0"></div><div><div class="field-label" style="font-size:10px;margin-bottom:5px">Date</div><input class="edit-input" type="date" id="ed-${e.id}" value="${e.date}"></div><div class="edit-note"><div class="field-label" style="font-size:10px;margin-bottom:5px">Note</div><input class="edit-input" type="text" id="en-${e.id}" value="${e.note||''}" placeholder="Note…"></div></div><div class="edit-actions"><button class="edit-save" onclick="saveEdit(${e.id})">Save</button><button class="edit-cancel" onclick="cancelEdit(${e.id})">Cancel</button></div>`;
-
-    // Add hover actions to the row
-    row.addEventListener('mouseenter',()=>row.querySelector('.tx-actions')&&(row.querySelector('.tx-actions').style.opacity='1'));
-    row.addEventListener('mouseleave',()=>row.querySelector('.tx-actions')&&(row.querySelector('.tx-actions').style.opacity='0'));
-
-    // Append action buttons into the last cell
-    const actCell=document.createElement('div');
-    actCell.className='tx-cell tx-cell-actions';
-    actCell.style.cssText='position:absolute;right:0;display:flex;gap:3px;';
-    // Use a wrapper instead — put edit/del in the amount cell via overlay
-    row.innerHTML+=`<div style="position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;gap:3px;opacity:0;transition:opacity .15s" class="tx-hover-acts">
-      <button class="act-btn" onclick="startEdit(${e.id})" title="Edit"><svg viewBox="0 0 16 16"><path d="M11.5 2.5a1.414 1.414 0 012 2L5 13H3v-2L11.5 2.5z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></button>
-      <button class="act-btn del" onclick="confirmDel(${e.id})" title="Delete"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="3 5 13 5"/><path d="M6 5V3h4v2M6 8v4M10 8v4"/><rect x="4" y="5" width="8" height="9" rx="1"/></svg></button>
-    </div>`;
-    row.style.position='relative';
-    row.addEventListener('mouseenter',()=>{const a=row.querySelector('.tx-hover-acts');if(a)a.style.opacity='1';});
-    row.addEventListener('mouseleave',()=>{const a=row.querySelector('.tx-hover-acts');if(a)a.style.opacity='0';});
 
     body.appendChild(row);
     body.appendChild(delRow);
