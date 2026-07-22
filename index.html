@@ -554,6 +554,33 @@ function personStyle(name,idx){
   const i=(idx||0)%PERSON_COLORS.length;
   return{color:PERSON_COLORS[i],bg:PERSON_BGS[i],i:name.slice(0,2).toUpperCase()};
 }
+// ── Supabase storage (falls back to localStorage on claude.ai) ──
+const SB_URL='https://scrqyoiaoazkiczclwup.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNjcnF5b2lhb2F6a2ljemNsd3VwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3NDk0NjYsImV4cCI6MjEwMDMyNTQ2Nn0.MeenU6BBreaua1pwwy5oS24ErjWQ5zU-83XJE-H9Y9Y';
+const USE_SB=!window.location.hostname.includes('claude.ai');
+const SB_HDR={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+
+async function dbLoad(){
+  if(!USE_SB)return JSON.parse(localStorage.getItem('fet_exp')||'[]');
+  try{
+    const r=await fetch(SB_URL+'/rest/v1/expenses?select=*&order=date.desc',{headers:SB_HDR});
+    if(!r.ok)throw new Error();
+    return await r.json();
+  }catch{return JSON.parse(localStorage.getItem('fet_exp')||'[]');}
+}
+async function dbInsert(exp){
+  if(!USE_SB){const r=JSON.parse(localStorage.getItem('fet_exp')||'[]');r.push(exp);localStorage.setItem('fet_exp',JSON.stringify(r));return;}
+  await fetch(SB_URL+'/rest/v1/expenses',{method:'POST',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify(exp)});
+}
+async function dbUpdate(eid,data){
+  if(!USE_SB){const r=JSON.parse(localStorage.getItem('fet_exp')||'[]');const i=r.findIndex(x=>x.id===eid);if(i>-1){r[i]={...r[i],...data};localStorage.setItem('fet_exp',JSON.stringify(r));}return;}
+  await fetch(SB_URL+'/rest/v1/expenses?id=eq.'+eid,{method:'PATCH',headers:{...SB_HDR,'Prefer':'return=minimal'},body:JSON.stringify(data)});
+}
+async function dbDelete(eid){
+  if(!USE_SB){let r=JSON.parse(localStorage.getItem('fet_exp')||'[]');r=r.filter(x=>x.id!==eid);localStorage.setItem('fet_exp',JSON.stringify(r));return;}
+  await fetch(SB_URL+'/rest/v1/expenses?id=eq.'+eid,{method:'DELETE',headers:{...SB_HDR,'Prefer':'return=minimal'}});
+}
+
 function avHtml(name,cls='av'){
   const a=AVATARS[name];
   if(!a)return'';
@@ -991,22 +1018,19 @@ function addCustomSub(){
   toast('Added');
 }
 
-function submitExpense(){
+async function submitExpense(){
   const amt=id('amount').value,dt=id('date').value,note=id('note').value;
   if(!amt||+amt<=0)return toast('Enter an amount');
   if(!selG)return toast('Select a category');
   const cat=CATS.find(c=>c.g===selG);
   if(!cat.miscCustom&&selC.length===0)return toast(cat.singleSel?'Select who was paid':'Select at least one option');
   const btn=id('submit-btn');btn.disabled=true;btn.textContent='Saving…';btn.style.opacity='.6';
-  const rows=JSON.parse(localStorage.getItem('fet_exp')||'[]');
-  rows.push({id:Date.now(),date:dt,group:selG,category:selC.join(', '),payment:selPayment,amount:+amt,currency:selCur,bank:selBank,person:JSON.stringify(selWho),note});
-  localStorage.setItem('fet_exp',JSON.stringify(rows));
-  setTimeout(()=>{
-    btn.disabled=false;btn.textContent='Save';btn.style.opacity='';
-    const savedAmt=amt,savedG=selG;
-    resetForm();closeDrawer();renderSummary();
-    setTimeout(()=>toast(`✓ ${savedG} expense saved`),380);
-  },120);
+  const exp={id:Date.now(),date:dt,group:selG,category:selC.join(', '),payment:selPayment,amount:+amt,currency:selCur,bank:selBank,person:JSON.stringify(selWho),note};
+  await dbInsert(exp);
+  btn.disabled=false;btn.textContent='Save';btn.style.opacity='';
+  const savedG=selG;
+  resetForm();closeDrawer();renderSummary();
+  setTimeout(()=>toast(`✓ ${savedG} expense saved`),380);
 }
 
 function resetForm(){
@@ -1032,8 +1056,8 @@ function toggleNotes(){
 // ── Summary ──
 let txSortCol='date',txSortDir=-1,txFilterCat='',txFilterBank='',txFilterPerson='';
 
-function renderSummary(){
-  const all=JSON.parse(localStorage.getItem('fet_exp')||'[]');
+async function renderSummary(){
+  const all=await dbLoad();
   const expenses=all.filter(e=>{const d=new Date(e.date);return d.getMonth()+1===curM&&d.getFullYear()===curY});
 
   if(!expenses.length){
@@ -1196,11 +1220,11 @@ function toggleCatFilter(g){
   txFilterCat=txFilterCat===g?'':g;
   renderSummary();
 }
-function setFilter(type,val){
+async function setFilter(type,val){
   if(type==='cat')txFilterCat=val;
   else if(type==='bank')txFilterBank=val;
   else if(type==='person')txFilterPerson=val;
-  const all=JSON.parse(localStorage.getItem('fet_exp')||'[]');
+  const all=await dbLoad();
   const expenses=all.filter(e=>{const d=new Date(e.date);return d.getMonth()+1===curM&&d.getFullYear()===curY});
   renderTxRows(expenses);
   // Sync cat cards active state
@@ -1217,26 +1241,23 @@ function startEdit(eid){closeAllEdits();const el=id('ee-'+eid);if(el)el.classLis
 function cancelEdit(eid){const el=id('ee-'+eid);if(el)el.classList.remove('open')}
 function closeAllEdits(){document.querySelectorAll('.entry-edit.open,.entry-del-confirm.open').forEach(e=>e.classList.remove('open'))}
 
-function saveEdit(eid){
+async function saveEdit(eid){
   const amt=parseFloat(id('ea-'+eid).value),dt=id('ed-'+eid).value,note=id('en-'+eid).value;
   if(!amt||amt<=0)return toast('Enter a valid amount');
   if(!dt)return toast('Pick a date');
-  const rows=JSON.parse(localStorage.getItem('fet_exp')||'[]');
-  const idx=rows.findIndex(r=>r.id===eid);
-  if(idx>-1){rows[idx]={...rows[idx],amount:amt,date:dt,note};localStorage.setItem('fet_exp',JSON.stringify(rows));}
+  await dbUpdate(eid,{amount:amt,date:dt,note});
   toast('Entry updated');renderSummary();
 }
 
 function confirmDel(eid){closeAllEdits();const el=id('dc-'+eid);if(el)el.classList.add('open')}
 function cancelDel(eid){const el=id('dc-'+eid);if(el)el.classList.remove('open')}
-function doDelete(eid){
-  let rows=JSON.parse(localStorage.getItem('fet_exp')||'[]');
-  rows=rows.filter(r=>r.id!==eid);localStorage.setItem('fet_exp',JSON.stringify(rows));
+async function doDelete(eid){
+  await dbDelete(eid);
   toast('Entry deleted');renderSummary();
 }
 
-function exportCSV(){
-  const all=JSON.parse(localStorage.getItem('fet_exp')||'[]');
+async function exportCSV(){
+  const all=await dbLoad();
   const rows=all.filter(e=>{const d=new Date(e.date);return d.getMonth()+1===curM&&d.getFullYear()===curY});
   if(!rows.length)return toast('No data to export');
   const csv=['Date,Group,Category,Amount,Person,Note',...rows.map(e=>[e.date,e.group,e.category,e.amount,parsePersons(e.person).join('|'),'"'+(e.note||'')+'"'].join(','))].join('\n');
