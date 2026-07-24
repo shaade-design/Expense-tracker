@@ -331,8 +331,8 @@ textarea.input{resize:none;min-height:84px}
 .btn-cancel-text{display:block;width:100%;padding:11px;background:none;border:none;font-size:14px;color:var(--text3);cursor:pointer;font-family:inherit;text-align:center;text-decoration:underline;text-underline-offset:2px;margin-top:2px}
 .btn-cancel-text:hover{color:var(--text2)}
 
-.btn-delete-entry{display:block;width:100%;padding:12px;background:none;border:1.5px solid var(--red);border-radius:6px;font-size:14px;font-weight:500;color:var(--red);cursor:pointer;font-family:inherit;text-align:center;margin-top:6px;transition:background .12s}
-.btn-delete-entry:hover{background:var(--red-bg)}
+.btn-delete-entry{display:block;width:100%;padding:14px;background:none;border:none;font-size:13px;font-weight:500;color:var(--text3);cursor:pointer;font-family:inherit;text-align:center;margin-top:8px;transition:color .15s}
+.btn-delete-entry:hover{color:var(--red)}
 
 /* Delete confirm modal */
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(3px)}
@@ -571,8 +571,8 @@ textarea.input{resize:none;min-height:84px}
       <!-- Actions -->
       <button class="btn-save" id="submit-btn" onclick="submitExpense()">Save</button>
       <button class="btn-cancel-text" id="cancel-btn" onclick="closeDrawer()">Cancel</button>
-      <button class="btn-delete-entry" id="delete-btn" onclick="promptDeleteEntry()" style="display:none">Delete entry</button>
     </div>
+    <button class="btn-delete-entry" id="delete-btn" onclick="promptDeleteEntry()" style="display:none">Delete entry</button>
   </div>
 </div>
 
