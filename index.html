@@ -466,7 +466,10 @@ textarea.input{resize:none;min-height:84px}
           <div class="form-top-dropdown" id="date-drop">
             <button class="ftd-item" onclick="selectDateOpt('today')">Today</button>
             <button class="ftd-item" onclick="selectDateOpt('yesterday')">Yesterday</button>
-            <button class="ftd-item" onclick="selectDateOpt('pick')">Pick date…</button>
+            <div style="padding:8px 14px 10px;border-top:1px solid #F2F2F6">
+              <div style="font-size:11px;color:#888;margin-bottom:5px;font-weight:500">Pick a date</div>
+              <input type="date" id="date" onchange="onDateInput(this.value)" style="width:100%;padding:7px 10px;font-size:13px;border:1px solid #EBEBF1;border-radius:6px;font-family:inherit;color:#071E3E;background:#fff;outline:none;cursor:pointer">
+            </div>
           </div>
         </div>
         <div class="form-top-drop">
@@ -478,7 +481,6 @@ textarea.input{resize:none;min-height:84px}
           <div class="form-top-dropdown" id="bank-drop" style="left:auto;right:0"></div>
         </div>
       </div>
-      <div style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;overflow:hidden"><input type="date" id="date" onchange="onDateInput(this.value)" tabindex="-1"></div>
 
       <!-- Amount card -->
       <div class="amount-card" onclick="id('amount').focus()">
@@ -712,10 +714,8 @@ function toggleDateDrop(e){
   id('date-drop').classList.toggle('open');
 }
 function selectDateOpt(opt){
-  id('date-drop').classList.remove('open');
-  if(opt==='today'){setDateLabel(dateFromOffset(0));}
-  else if(opt==='yesterday'){setDateLabel(dateFromOffset(1));}
-  else{id('date').showPicker?id('date').showPicker():id('date').click();}
+  if(opt==='today'){setDateLabel(dateFromOffset(0));id('date-drop').classList.remove('open');}
+  else if(opt==='yesterday'){setDateLabel(dateFromOffset(1));id('date-drop').classList.remove('open');}
 }
 function id(x){return document.getElementById(x)}
 function getCustomSubs(g){return JSON.parse(localStorage.getItem('fet_csub_'+g)||'[]')}
@@ -826,7 +826,7 @@ function toggleDatePicker(){
 function onDateInput(val){
   if(!val)return;
   setDateLabel(val);
-  const wrap=id('date-pick-wrap');if(wrap)wrap.classList.remove('open');
+  id('date-drop').classList.remove('open');
 }
 function resetDateChips(){
   const wrap=id('date-pick-wrap');if(wrap)wrap.classList.remove('open');
