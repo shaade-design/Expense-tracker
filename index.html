@@ -93,16 +93,16 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg2
 .filter-select:focus{border-color:#1B6EE4}
 .filter-count{font-size:11px;color:var(--text3);margin-left:auto}
 .tx-table-wrap{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:12px}
-.tx-table-head{display:grid;grid-template-columns:80px 1fr 1fr 90px 100px 64px 52px;gap:0;border-bottom:1px solid var(--border);background:var(--bg2)}
+.tx-table-head{display:grid;grid-template-columns:80px 1fr 1fr 90px 100px 80px;gap:0;border-bottom:1px solid var(--border);background:var(--bg2)}
 .tx-th{padding:9px 14px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;cursor:pointer;user-select:none;display:flex;align-items:center;gap:4px;transition:color .12s}
 .tx-th:hover{color:var(--text)}
 .tx-th.sorted{color:var(--text)}
 .sort-arrow{font-size:9px;opacity:.5}.sort-arrow.on{opacity:1}
 .tx-mobile-meta{display:none;font-size:11px;color:var(--text2);padding:0 14px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tx-desktop-only{}
-.tx-table-body .entry-row{display:grid;grid-template-columns:80px 1fr 1fr 90px 100px 64px 52px;gap:0;padding:0;border-bottom:1px solid var(--border);align-items:stretch}
+.tx-table-body .entry-row{display:grid;grid-template-columns:80px 1fr 1fr 90px 100px 80px;gap:0;padding:0;border-bottom:1px solid var(--border);align-items:stretch}
 .tx-cell-acts{display:flex;align-items:center;justify-content:center;gap:2px;opacity:0;transition:opacity .15s}
-.entry-row:hover .tx-cell-acts{opacity:1}
+.tx-table-body .entry-row:hover{background:var(--bg2)}
 .tx-table-body .entry-row:last-child{border-bottom:none}
 .tx-cell{padding:11px 14px;font-size:12px;display:flex;align-items:center;min-width:0;overflow:hidden}
 .tx-cell-date{color:var(--text2);font-variant-numeric:tabular-nums;font-size:11px}
@@ -1303,7 +1303,6 @@ async function renderSummary(){
       <div class="tx-th">Person</div>
       <div class="tx-th">Bank</div>
       <div class="tx-th${txSortCol==='amount'?' sorted':''}" onclick="sortTx('amount')" style="justify-content:flex-end">Amount ${sortIcon('amount')}</div>
-      <div class="tx-th"></div>
     </div>
     <div class="tx-table-body" id="tx-body"></div>
   </div>`;
@@ -1342,9 +1341,10 @@ function renderTxRows(expenses){
     const sym=CUR_SYM[e.currency||'USD'];
 
     const iconHtml=cat.iconImg?`<img src="${cat.iconImg}" style="width:15px;height:15px;object-fit:contain">`:(cat.icon||'');
-    const actBtns=`<button class="act-btn" onclick="startEdit(${e.id})" title="Edit"><svg viewBox="0 0 16 16"><path d="M11.5 2.5a1.414 1.414 0 012 2L5 13H3v-2L11.5 2.5z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></button><button class="act-btn del" onclick="confirmDel(${e.id})" title="Delete"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="3 5 13 5"/><path d="M6 5V3h4v2M6 8v4M10 8v4"/><rect x="4" y="5" width="8" height="9" rx="1"/></svg></button>`;
     const row=document.createElement('div');
     row.className='entry-row';row.id='er-'+e.id;
+    row.style.cursor='pointer';
+    row.onclick=()=>startEdit(e.id);
     row.innerHTML=`
       <div class="tx-cell tx-cell-date">${dl}</div>
       <div class="tx-cell tx-cell-cat">
@@ -1355,7 +1355,6 @@ function renderTxRows(expenses){
       <div class="tx-cell tx-desktop-only" style="font-size:11px">${personStr}</div>
       <div class="tx-cell tx-desktop-only" style="font-size:11px;color:var(--text2)">${bankLabel}</div>
       <div class="tx-cell tx-cell-amt">${sym}${fmt(e.amount)}</div>
-      <div class="tx-cell tx-cell-acts">${actBtns}</div>
       <div class="tx-mobile-meta">${[details,bankLabel,personStr].filter(s=>s&&s!=='—').join(' · ')}</div>
     `;
 
