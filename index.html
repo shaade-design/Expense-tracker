@@ -380,7 +380,7 @@ textarea.input{resize:none;min-height:84px}
 <div class="backdrop" id="backdrop" onclick="closeDrawer()"></div>
 <div class="drawer" id="drawer">
   <div class="drawer-header">
-    <span class="drawer-title">Add expense</span>
+    <span class="drawer-title" id="drawer-title">Add expense</span>
     <button class="drawer-close" onclick="closeDrawer()">×</button>
   </div>
   <div class="drawer-body">
@@ -513,7 +513,7 @@ const PROP_ITEMS=['HOA','Electricity','Gas','Cable','Internet','Water','Maintena
 const CATS=[
   {g:'Staff',        iconImg:ICON_STAFF,color:'#7C6FCD',bg:'#F0EFFE',
    q1:'Who was paid?',items:['Yolety','Rudy','Jose (Driver)','Luis (Physical Therapy)'],singleSel:true,
-   q2:'How was {name} paid?',q2items:['Bank','Zelle'],q2optional:true,q2hasCustom:true},
+   q2:'How was {name} paid?',q2items:['Bank','Zelle','Cash'],q2optional:true,q2hasCustom:true},
   {g:'Floral',       iconImg:ICON_FLORAL,color:'#0099A8',bg:'#E5F6F8',
    q1:'What was done at Floral?',items:PROP_ITEMS,hasCustom:true},
   {g:'Groceries',    iconImg:ICON_GROCERIES,color:'#6B7FCC',bg:'#EDEFFE',
@@ -600,7 +600,7 @@ const BANKS=[
   {id:'oth', name:'Other',       label:'Other',       sub:'Specify in notes', cur:'USD', color:'#888'},
 ];
 
-let selG=null,selC=[],selWho=[],selPayment=null,selCur='USD',selBank=null,curM,curY;
+let selG=null,selC=[],selWho=[],selPayment=null,selCur='USD',selBank=null,curM,curY,editingId=null;
 const CUR_SYM={USD:'$',VES:'Bs.'};
 
 function setCurrency(cur){
@@ -790,15 +790,60 @@ function changeMonth(d){
 
 // ── Drawer ──
 function openDrawer(){
+  editingId=null;
   resetForm();
+  id('drawer-title').textContent='Add expense';
   id('drawer').classList.add('open');
   id('backdrop').classList.add('open');
   document.body.style.overflow='hidden';
 }
 function closeDrawer(){
+  editingId=null;
   id('drawer').classList.remove('open');
   id('backdrop').classList.remove('open');
   document.body.style.overflow='';
+}
+async function openDrawerForEdit(eid){
+  const all=await dbLoad();
+  const e=all.find(x=>x.id===eid);
+  if(!e)return;
+  editingId=eid;
+  resetForm();
+  id('drawer-title').textContent='Edit expense';
+  // pre-fill amount + currency
+  id('amount').value=e.amount;
+  selCur=e.currency||'USD';
+  id('cur-btn-usd').classList.toggle('sel',selCur==='USD');
+  id('cur-btn-ves').classList.toggle('sel',selCur==='VES');
+  id('amt-symbol').textContent=selCur==='USD'?'$':'Bs';
+  // pre-fill date
+  setDateLabel(e.date);
+  // pre-fill bank
+  const bank=BANKS.find(b=>b.id===e.bank)||BANKS[0];
+  selBank=bank.id;selCur=e.currency||bank.cur;
+  id('bank-label').textContent=bank.label;
+  // pre-fill note
+  if(e.note)id('note').value=e.note;
+  // pre-fill group/category
+  if(e.group){
+    const cat=CATS.find(c=>c.g===e.group);
+    if(cat){
+      selG=e.group;
+      selC=e.category?e.category.split(', ').filter(Boolean):[];
+      showCatSelected(cat);
+      id('cat-grid').classList.remove('show');
+      id('subfield').style.display='none';
+    }
+  }
+  // show amount grid
+  id('cat-grid').classList.remove('show');
+  // enable save btn
+  const btn=id('submit-btn');
+  btn.textContent='Save changes';
+  btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';
+  id('drawer').classList.add('open');
+  id('backdrop').classList.add('open');
+  document.body.style.overflow='hidden';
 }
 
 // ── Form ──
@@ -1022,9 +1067,16 @@ async function submitExpense(){
   const amt=id('amount').value,dt=id('date').value,note=id('note').value;
   if(!amt||+amt<=0)return toast('Enter an amount');
   if(!selG)return toast('Select a category');
+  const btn=id('submit-btn');btn.disabled=true;btn.textContent='Saving…';btn.style.opacity='.6';
+  if(editingId){
+    await dbUpdate(editingId,{amount:+amt,date:dt,note,group:selG,category:selC.join(', '),payment:selPayment,currency:selCur,bank:selBank,person:JSON.stringify(selWho)});
+    btn.disabled=false;btn.textContent='Save changes';btn.style.opacity='';
+    closeDrawer();renderSummary();
+    setTimeout(()=>toast('✓ Entry updated'),380);
+    return;
+  }
   const cat=CATS.find(c=>c.g===selG);
   if(!cat.miscCustom&&selC.length===0)return toast(cat.singleSel?'Select who was paid':'Select at least one option');
-  const btn=id('submit-btn');btn.disabled=true;btn.textContent='Saving…';btn.style.opacity='.6';
   const exp={id:Date.now(),date:dt,group:selG,category:selC.join(', '),payment:selPayment,amount:+amt,currency:selCur,bank:selBank,person:JSON.stringify(selWho),note};
   await dbInsert(exp);
   btn.disabled=false;btn.textContent='Save';btn.style.opacity='';
@@ -1237,7 +1289,7 @@ function sortTx(col){
   renderSummary();
 }
 
-function startEdit(eid){closeAllEdits();const el=id('ee-'+eid);if(el)el.classList.add('open')}
+function startEdit(eid){closeAllEdits();openDrawerForEdit(eid);}
 function cancelEdit(eid){const el=id('ee-'+eid);if(el)el.classList.remove('open')}
 function closeAllEdits(){document.querySelectorAll('.entry-edit.open,.entry-del-confirm.open').forEach(e=>e.classList.remove('open'))}
 
