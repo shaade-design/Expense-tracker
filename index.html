@@ -483,7 +483,7 @@ textarea.input{resize:none;min-height:84px}
             <span id="date-label">Today</span>
             <span class="dd-arrow"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 6L8 11L13 6" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           </button>
-          <input type="date" id="date" onchange="onDateInput(this.value)" style="position:fixed;opacity:0;pointer-events:none;top:0;left:0;width:1px;height:1px">
+          <input type="date" id="date" onchange="onDateInput(this.value)" style="position:absolute;opacity:0;pointer-events:none;top:100%;left:0;width:1px;height:1px">
         </div>
         <div class="form-top-drop">
           <button class="pill-select" onclick="toggleBankDrop(event)">
