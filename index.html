@@ -198,9 +198,9 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg2
 .bank-sub{font-size:11px;color:#888}
 .bank-bal{font-size:12px;font-weight:600;color:#1B6EE4;white-space:nowrap}
 /* Date pill — label overlay on top of native date input */
-.date-pill-wrap{position:relative;display:inline-flex;align-items:center;gap:8px;padding:10px;height:41px;border-radius:6px;font-size:14px;font-weight:500;letter-spacing:.024em;border:1px solid #EBEBF1;background:#fff;color:#071E3E;cursor:pointer;white-space:nowrap}
-.date-pill-label{pointer-events:none;font-size:14px;font-weight:500;color:#071E3E}
-.date-pill-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;background:none;font-size:14px}
+.date-pill-wrap{position:relative;display:inline-flex;align-items:center;gap:8px;padding:10px;height:41px;border-radius:6px;font-size:14px;font-weight:500;letter-spacing:.024em;border:1px solid #EBEBF1;background:#fff;color:#071E3E;cursor:pointer;white-space:nowrap;overflow:hidden}
+.date-pill-label{pointer-events:none;font-size:14px;font-weight:500;color:#071E3E;position:relative;z-index:0}
+.date-pill-input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;background:none;font-size:16px;z-index:2;-webkit-appearance:none}
 
 /* Currency toggle on amount card */
 .cur-toggle{display:flex;flex-direction:column;flex-shrink:0;border-radius:8px;overflow:hidden;width:44px}
@@ -224,7 +224,7 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg2
 .amount-card{background:#F5F5F5;border-radius:9px;padding:10px 17px 12px;cursor:text}
 .amount-display{display:flex;align-items:center;gap:6px}
 .amount-sym{font-size:42px;font-weight:400;color:#000;line-height:1.4}
-.amount-big{flex:1;font-size:72px;font-weight:400;color:#000;border:none;outline:none;background:transparent;font-family:'Inter',system-ui,sans-serif;letter-spacing:.01em;font-variant-numeric:tabular-nums;min-width:0;line-height:1.2;width:100%;text-align:center}
+.amount-big{flex:1;font-size:clamp(28px,10vw,72px);font-weight:400;color:#000;border:none;outline:none;background:transparent;font-family:'Inter',system-ui,sans-serif;letter-spacing:.01em;font-variant-numeric:tabular-nums;min-width:0;line-height:1.2;width:100%;text-align:center}
 .amount-big::placeholder{color:#ccc}
 
 /* Field label */
@@ -479,11 +479,11 @@ textarea.input{resize:none;min-height:84px}
       <!-- Date + Currency row -->
       <div class="form-top-row">
         <div class="form-top-drop" style="position:relative">
-          <div class="date-pill-wrap">
-            <span class="date-pill-label" id="date-label">Today</span>
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style="flex-shrink:0;opacity:.5"><path d="M3 6L8 11L13 6" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <input type="date" id="date" onchange="onDateInput(this.value)" class="date-pill-input">
-          </div>
+          <button class="pill-select" type="button" onclick="openDatePicker()">
+            <span id="date-label">Today</span>
+            <span class="dd-arrow"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 6L8 11L13 6" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          </button>
+          <input type="date" id="date" onchange="onDateInput(this.value)" style="position:fixed;opacity:0;pointer-events:none;top:0;left:0;width:1px;height:1px">
         </div>
         <div class="form-top-drop">
           <button class="pill-select" onclick="toggleBankDrop(event)">
@@ -695,7 +695,6 @@ const BANKS=[
   {id:'wf',  name:'Wells Fargo', label:'Wells Fargo', sub:'External · USD', cur:'USD', color:'#C0392B'},
   {id:'mc',  name:'Mercantil',   label:'Merc: Cheo',  sub:'Cheo · Mercantil',  cur:'VES', color:'#1B6EE4'},
   {id:'mcp', name:'Mercantil',   label:'Merc: Papa',  sub:'Papa · Mercantil',  cur:'VES', color:'#1B6EE4'},
-  {id:'ban', name:'Banesco',     label:'Ban: Papa',   sub:'Papa · Banesco',    cur:'VES', color:'#0099A8'},
   {id:'oth', name:'Other',       label:'Other',       sub:'Specify in notes', cur:'USD', color:'#888'},
 ];
 
@@ -834,6 +833,11 @@ function setDateLabel(iso){
   id('date-label').textContent=fmtDateLabel(iso);
   id('date').value=iso;
 }
+function openDatePicker(){
+  const inp=id('date');
+  if(inp.showPicker){try{inp.showPicker();}catch(e){inp.focus();}}
+  else{inp.focus();}
+}
 function onDateInput(val){
   if(!val)return;
   setDateLabel(val);
@@ -953,7 +957,15 @@ function checkSaveBtn(){
   btn.style.cursor=valid?'pointer':'not-allowed';
 }
 
+function scaleAmountFont(){
+  const inp=id('amount');
+  const len=(inp.value||'').replace('.','').length;
+  const size=len<=5?72:len<=7?52:len<=9?38:28;
+  inp.style.fontSize=size+'px';
+  id('amt-symbol').style.fontSize=(size*0.58)+'px';
+}
 function onAmountInput(){
+  scaleAmountFont();
   const val=parseFloat(id('amount').value);
   const grid=id('cat-grid');
   if(val>0){
