@@ -1,4 +1,5 @@
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Family Expense Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -97,6 +98,8 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg2
 .tx-th:hover{color:var(--text)}
 .tx-th.sorted{color:var(--text)}
 .sort-arrow{font-size:9px;opacity:.5}.sort-arrow.on{opacity:1}
+.tx-mobile-meta{display:none;font-size:11px;color:var(--text2);padding:0 14px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tx-desktop-only{}
 .tx-table-body .entry-row{display:grid;grid-template-columns:80px 1fr 1fr 90px 100px 64px 52px;gap:0;padding:0;border-bottom:1px solid var(--border);align-items:stretch}
 .tx-cell-acts{display:flex;align-items:center;justify-content:center;gap:2px;opacity:0;transition:opacity .15s}
 .entry-row:hover .tx-cell-acts{opacity:1}
@@ -345,7 +348,76 @@ textarea.input{resize:none;min-height:84px}
 .bank-topup-label{font-size:12px;font-weight:500;color:#555}
 .bank-topup-inputs{display:flex;gap:6px}
 .bank-topup-inputs .input{flex:1;font-size:13px;padding:8px 10px;height:38px}
-@media(max-width:560px){.shell{padding:20px 16px 60px}.drawer-body{padding:20px 16px}.header{padding:0 16px}.header-badge{display:none}.edit-grid{grid-template-columns:1fr}}
+@media(max-width:600px){
+  /* Layout */
+  .shell{padding:16px 12px 80px}
+  .header{padding:0 12px}
+  .header-badge{display:none}
+  .header-title{font-size:14px}
+
+  /* "Add Expense" → "+" on small screens */
+  .add-btn .add-btn-text{display:none}
+  .add-btn{padding:0;width:36px;height:36px;border-radius:50%;justify-content:center;font-size:20px;font-weight:400}
+
+  /* Hero */
+  .hero-amount{font-size:36px}
+
+  /* Category stat cards: 2 columns */
+  .cat-cards-row{grid-template-columns:repeat(2,1fr);gap:8px}
+
+  /* Filter bar: horizontal scroll */
+  .filter-bar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none}
+  .filter-bar::-webkit-scrollbar{display:none}
+  .filter-count{flex-shrink:0}
+
+  /* Transaction table → card rows on mobile */
+  .tx-table-head{display:none}
+  .tx-table-body .entry-row{
+    display:grid;
+    grid-template-columns:1fr auto auto;
+    grid-template-rows:auto auto;
+    padding:10px 14px 0;
+    gap:0;
+    align-items:center;
+  }
+  .tx-cell{padding:4px 0;overflow:visible}
+  .tx-cell-date{grid-column:1;grid-row:2;font-size:11px;color:var(--text3);padding:0 0 10px}
+  .tx-cell-cat{grid-column:1;grid-row:1;gap:6px;padding:0}
+  .tx-desktop-only{display:none!important}
+  .tx-mobile-meta{display:block;grid-column:1;grid-row:2;padding:0 0 10px;color:var(--text2)}
+  .tx-cell-amt{grid-column:2;grid-row:1/3;font-size:14px;font-weight:700;padding:0 8px;align-self:center}
+  /* Always show edit/delete on mobile */
+  .tx-cell-acts{grid-column:3;grid-row:1/3;opacity:1!important;flex-direction:column;gap:2px;align-self:center;padding:0}
+  .act-btn{width:32px;height:32px}
+
+  /* Drawer full screen */
+  .drawer{width:100vw}
+  .drawer-body{padding:16px 14px 100px}
+  .form-card{padding:16px 16px 10px;gap:14px}
+
+  /* Amount input smaller on mobile */
+  .amount-big{font-size:52px}
+  .amount-sym{font-size:32px}
+
+  /* Cat grid: 3 cols still fine, just tighter */
+  .cat-tile{min-height:64px;padding:8px 4px 6px}
+  .cat-tile-icon{width:32px;height:32px}
+
+  /* Save button bottom-fixed on mobile */
+  .drawer-footer-mobile{
+    position:sticky;bottom:0;background:#FAFAFC;
+    padding:12px 14px 24px;margin:0 -14px -100px;
+    border-top:1px solid #EBEBF1
+  }
+
+  /* Edit grid stacked */
+  .edit-grid{grid-template-columns:1fr}
+}
+/* Touch devices: always show row actions */
+@media(hover:none){
+  .tx-cell-acts{opacity:1 !important}
+  .entry-actions{opacity:1 !important}
+}
 </style>
 
 <!-- Header -->
@@ -354,9 +426,7 @@ textarea.input{resize:none;min-height:84px}
     <div class="logo-mark"><svg viewBox="0 0 14 14"><path d="M7 1L13 4V10L7 13L1 10V4L7 1Z"/></svg></div>
     <span class="header-title">Family Expenses</span>
     <span class="header-badge">Venezuela</span>
-    <button class="add-btn" onclick="openDrawer()">
-+ Add Expense
-    </button>
+    <button class="add-btn" onclick="openDrawer()">+<span class="add-btn-text"> Add Expense</span></button>
   </div>
 </div>
 
@@ -1232,22 +1302,22 @@ function renderTxRows(expenses){
     const details=[e.category,e.note].filter(Boolean).join(' / ')||'—';
     const sym=CUR_SYM[e.currency||'USD'];
 
+    const iconHtml=cat.iconImg?`<img src="${cat.iconImg}" style="width:15px;height:15px;object-fit:contain">`:(cat.icon||'');
+    const actBtns=`<button class="act-btn" onclick="startEdit(${e.id})" title="Edit"><svg viewBox="0 0 16 16"><path d="M11.5 2.5a1.414 1.414 0 012 2L5 13H3v-2L11.5 2.5z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></button><button class="act-btn del" onclick="confirmDel(${e.id})" title="Delete"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="3 5 13 5"/><path d="M6 5V3h4v2M6 8v4M10 8v4"/><rect x="4" y="5" width="8" height="9" rx="1"/></svg></button>`;
     const row=document.createElement('div');
     row.className='entry-row';row.id='er-'+e.id;
     row.innerHTML=`
       <div class="tx-cell tx-cell-date">${dl}</div>
       <div class="tx-cell tx-cell-cat">
-        <div class="e-badge" style="background:${cat.bg};font-size:14px;width:26px;height:26px;flex-shrink:0">${cat.iconImg?`<img src="${cat.iconImg}" style="width:15px;height:15px;object-fit:contain">`:(cat.icon||'')}</div>
+        <div class="e-badge" style="background:${cat.bg};font-size:14px;width:26px;height:26px;flex-shrink:0">${iconHtml}</div>
         <span style="font-weight:600;font-size:12px">${e.group}</span>
       </div>
-      <div class="tx-cell" style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${details}</div>
-      <div class="tx-cell" style="font-size:11px">${personStr}</div>
-      <div class="tx-cell" style="font-size:11px;color:var(--text2)">${bankLabel}</div>
+      <div class="tx-cell tx-desktop-only" style="font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${details}</div>
+      <div class="tx-cell tx-desktop-only" style="font-size:11px">${personStr}</div>
+      <div class="tx-cell tx-desktop-only" style="font-size:11px;color:var(--text2)">${bankLabel}</div>
       <div class="tx-cell tx-cell-amt">${sym}${fmt(e.amount)}</div>
-      <div class="tx-cell tx-cell-acts">
-        <button class="act-btn" onclick="startEdit(${e.id})" title="Edit"><svg viewBox="0 0 16 16"><path d="M11.5 2.5a1.414 1.414 0 012 2L5 13H3v-2L11.5 2.5z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg></button>
-        <button class="act-btn del" onclick="confirmDel(${e.id})" title="Delete"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><polyline points="3 5 13 5"/><path d="M6 5V3h4v2M6 8v4M10 8v4"/><rect x="4" y="5" width="8" height="9" rx="1"/></svg></button>
-      </div>
+      <div class="tx-cell tx-cell-acts">${actBtns}</div>
+      <div class="tx-mobile-meta">${[details,bankLabel,personStr].filter(s=>s&&s!=='—').join(' · ')}</div>
     `;
 
     const delRow=document.createElement('div');
