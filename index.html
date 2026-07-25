@@ -101,7 +101,6 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg2
 .tx-mobile-meta{display:none;font-size:11px;color:var(--text2);padding:0 14px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tx-desktop-only{}
 .tx-table-body .entry-row{display:grid;grid-template-columns:80px 1fr 1fr 90px 100px 80px;gap:0;padding:0;border-bottom:1px solid var(--border);align-items:stretch}
-.tx-cell-acts{display:flex;align-items:center;justify-content:center;gap:2px;opacity:0;transition:opacity .15s}
 .tx-table-body .entry-row:hover{background:var(--bg2)}
 .tx-table-body .entry-row:last-child{border-bottom:none}
 .tx-cell{padding:11px 14px;font-size:12px;display:flex;align-items:center;min-width:0;overflow:hidden}
@@ -479,11 +478,19 @@ textarea.input{resize:none;min-height:84px}
       <!-- Date + Currency row -->
       <div class="form-top-row">
         <div class="form-top-drop" style="position:relative">
-          <button class="pill-select" type="button" onclick="openDatePicker()">
+          <button class="pill-select" id="date-pill-btn" type="button" onclick="toggleDateDrop(event)">
             <span id="date-label">Today</span>
             <span class="dd-arrow"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 6L8 11L13 6" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           </button>
-          <input type="date" id="date" onchange="onDateInput(this.value)" style="position:absolute;opacity:0;pointer-events:none;top:100%;left:0;width:1px;height:1px">
+        </div>
+        <!-- Fixed date dropdown portal -->
+        <div id="date-drop" style="display:none;position:fixed;z-index:200;background:#fff;border:1px solid #EBEBF1;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:200px;overflow:hidden">
+          <button class="ftd-item" onclick="selectDateOpt('today')">Today</button>
+          <button class="ftd-item" onclick="selectDateOpt('yesterday')">Yesterday</button>
+          <div style="padding:8px 14px 12px;border-top:1px solid #F2F2F6">
+            <div style="font-size:11px;color:#888;margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Pick a date</div>
+            <input type="date" id="date" onchange="onDateInput(this.value)" style="width:100%;padding:8px 10px;font-size:14px;border:1px solid #EBEBF1;border-radius:6px;font-family:inherit;color:#071E3E;background:#fff;outline:none;cursor:pointer">
+          </div>
         </div>
         <div class="form-top-drop">
           <button class="pill-select" onclick="toggleBankDrop(event)">
@@ -833,14 +840,25 @@ function setDateLabel(iso){
   id('date-label').textContent=fmtDateLabel(iso);
   id('date').value=iso;
 }
-function openDatePicker(){
-  const inp=id('date');
-  if(inp.showPicker){try{inp.showPicker();}catch(e){inp.focus();}}
-  else{inp.focus();}
+function toggleDateDrop(e){
+  e&&e.stopPropagation();
+  const drop=id('date-drop');
+  const btn=id('date-pill-btn');
+  if(drop.style.display!=='none'){drop.style.display='none';return;}
+  const r=btn.getBoundingClientRect();
+  drop.style.top=(r.bottom+6)+'px';
+  drop.style.left=r.left+'px';
+  drop.style.display='block';
+}
+function selectDateOpt(opt){
+  if(opt==='today')setDateLabel(dateFromOffset(0));
+  else if(opt==='yesterday')setDateLabel(dateFromOffset(1));
+  id('date-drop').style.display='none';
 }
 function onDateInput(val){
   if(!val)return;
   setDateLabel(val);
+  id('date-drop').style.display='none';
 }
 function resetDateChips(){
   setDateLabel(dateFromOffset(0));
@@ -852,9 +870,10 @@ function init(){
   curM=t.getMonth()+1;curY=t.getFullYear();
   updateMonthDisplay();renderSummary();
   renderBankDrop();
-  document.addEventListener('click',()=>{
-    const dd=id('date-drop');if(dd)dd.classList.remove('open');
-    const bd=id('bank-drop');if(bd)bd.classList.remove('open');
+  document.addEventListener('click',(e)=>{
+    const dd=id('date-drop');
+    if(dd&&dd.style.display!=='none'&&!dd.contains(e.target)&&e.target!==id('date-pill-btn')&&!id('date-pill-btn')?.contains(e.target))dd.style.display='none';
+    const bd=id('bank-drop');if(bd&&!bd.contains(e.target))bd.classList.remove('open');
   });
 }
 
