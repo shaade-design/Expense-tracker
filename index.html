@@ -506,14 +506,14 @@ textarea.input{resize:none;min-height:84px}
             <span id="date-label">Today</span>
             <span class="dd-arrow"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M3 6L8 11L13 6" stroke="#555" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           </button>
-        </div>
-        <!-- Fixed date dropdown portal -->
-        <div id="date-drop" style="display:none;position:fixed;z-index:200;background:#fff;border:1px solid #EBEBF1;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:200px;overflow:hidden">
-          <button class="ftd-item" onclick="selectDateOpt('today')">Today</button>
-          <button class="ftd-item" onclick="selectDateOpt('yesterday')">Yesterday</button>
-          <div style="padding:8px 14px 12px;border-top:1px solid #F2F2F6">
-            <div style="font-size:11px;color:#888;margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Pick a date</div>
-            <input type="date" id="date" onchange="onDateInput(this.value)" style="width:100%;padding:8px 10px;font-size:14px;border:1px solid #EBEBF1;border-radius:6px;font-family:inherit;color:#071E3E;background:#fff;outline:none;cursor:pointer">
+          <!-- Date dropdown — absolute inside position:relative parent -->
+          <div id="date-drop" style="display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:200;background:#fff;border:1px solid #EBEBF1;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:220px;overflow:hidden">
+            <button class="ftd-item" onclick="selectDateOpt('today')">Today</button>
+            <button class="ftd-item" onclick="selectDateOpt('yesterday')">Yesterday</button>
+            <div style="padding:8px 14px 12px;border-top:1px solid #F2F2F6">
+              <div style="font-size:11px;color:#888;margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:.04em">Pick a date</div>
+              <input type="date" id="date" onchange="onDateInput(this.value)" style="width:100%;padding:8px 10px;font-size:14px;border:1px solid #EBEBF1;border-radius:6px;font-family:inherit;color:#071E3E;background:#fff;outline:none;cursor:pointer">
+            </div>
           </div>
         </div>
         <div class="form-top-drop">
@@ -867,12 +867,7 @@ function setDateLabel(iso){
 function toggleDateDrop(e){
   if(e)e.stopPropagation();
   const drop=id('date-drop');
-  if(drop.style.display!=='none'){drop.style.display='none';return;}
-  const btn=e?e.currentTarget:id('date-pill-btn');
-  const r=btn.getBoundingClientRect();
-  drop.style.top=(r.bottom+6)+'px';
-  drop.style.left=r.left+'px';
-  drop.style.display='block';
+  drop.style.display=drop.style.display!=='none'?'none':'block';
 }
 function selectDateOpt(opt){
   if(opt==='today')setDateLabel(dateFromOffset(0));
