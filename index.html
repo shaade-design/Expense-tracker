@@ -865,10 +865,10 @@ function setDateLabel(iso){
   id('date').value=iso;
 }
 function toggleDateDrop(e){
-  e&&e.stopPropagation();
+  if(e)e.stopPropagation();
   const drop=id('date-drop');
-  const btn=id('date-pill-btn');
   if(drop.style.display!=='none'){drop.style.display='none';return;}
+  const btn=e?e.currentTarget:id('date-pill-btn');
   const r=btn.getBoundingClientRect();
   drop.style.top=(r.bottom+6)+'px';
   drop.style.left=r.left+'px';
@@ -1010,34 +1010,41 @@ async function openDrawerForEdit(eid){
   editingId=eid;
   resetForm();
   id('drawer-title').textContent='Edit expense';
-  // pre-fill amount + currency
   id('amount').value=e.amount;
+  scaleAmountFont();
   selCur=e.currency||'USD';
   id('cur-btn-usd').classList.toggle('sel',selCur==='USD');
   id('cur-btn-ves').classList.toggle('sel',selCur==='VES');
   id('amt-symbol').textContent=selCur==='USD'?'$':'Bs';
-  // pre-fill date
   setDateLabel(e.date);
-  // pre-fill bank
   const bank=BANKS.find(b=>b.id===e.bank)||BANKS[0];
-  selBank=bank.id;selCur=e.currency||bank.cur;
+  selBank=bank.id;
   id('bank-label').textContent=bank.label;
-  // pre-fill note
-  if(e.note)id('note').value=e.note;
-  // pre-fill group/category
   if(e.group){
     const cat=CATS.find(c=>c.g===e.group);
     if(cat){
-      selG=e.group;
+      pickGroup(e.group);
+      // pickGroup resets selC/selPayment — restore them
       selC=e.category?e.category.split(', ').filter(Boolean):[];
+      selPayment=e.payment||null;
+      // re-mark sub-chips as selected
+      id('sub-chips').querySelectorAll('.chip,.staff-chip,.sub-list-item').forEach(b=>{
+        const nameEl=b.querySelector('.staff-name')||b.querySelector('.chip-label')||b.querySelector('span');
+        if(nameEl&&selC.includes(nameEl.textContent.trim()))b.classList.add('sel');
+      });
+      if(cat.singleSel&&selC[0]){
+        showStaffSelected(selC[0]);
+        if(cat.q2items){renderPaymentQ2(cat);id('q2field').style.display='block';}
+      }
       showCatSelected(cat);
-      id('cat-grid').classList.remove('show');
-      id('subfield').style.display='none';
+      checkSaveBtn();
     }
   }
-  // show amount grid
-  id('cat-grid').classList.remove('show');
-  // enable save btn + show delete
+  if(e.note){
+    id('note').value=e.note;
+    id('notes-body').classList.add('open');
+    id('notes-chevron').classList.add('open');
+  }
   const btn=id('submit-btn');
   btn.textContent='Save changes';
   btn.disabled=false;btn.style.opacity='1';btn.style.cursor='pointer';
