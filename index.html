@@ -345,6 +345,24 @@ textarea.input{resize:none;min-height:84px}
 .modal-confirm{flex:1;padding:11px;border:none;border-radius:8px;background:var(--red);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:#fff}
 .modal-confirm:hover{opacity:.88}
 
+/* Income section */
+.income-section{margin-bottom:20px}
+.income-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.income-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;cursor:pointer;transition:border-color .15s,box-shadow .15s;position:relative}
+.income-card:hover{border-color:#1B6EE4;box-shadow:0 2px 8px rgba(27,110,228,.1)}
+.income-card-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.income-card-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.income-card-name{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;flex:1;line-height:1.2}
+.income-card-amt{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);line-height:1.2}
+.income-card-cur{font-size:10px;font-weight:600;color:var(--text3);margin-top:2px}
+.income-card-edit{font-size:10px;color:var(--text3);margin-top:6px;display:flex;align-items:center;gap:4px}
+.income-edit-wrap{display:none;padding:10px 0 4px;flex-direction:column;gap:8px}
+.income-edit-wrap.open{display:flex}
+.income-edit-input{width:100%;padding:8px 11px;font-size:15px;border:1.5px solid #1B6EE4;border-radius:8px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;font-variant-numeric:tabular-nums}
+.income-edit-actions{display:flex;gap:6px}
+.income-save-btn{flex:1;padding:8px;background:#1B6EE4;color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.income-cancel-btn{padding:8px 12px;background:transparent;border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;color:var(--text2)}
+
 /* Toast */
 .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--text);color:var(--bg);padding:10px 18px;border-radius:var(--radius-pill);font-size:13px;font-weight:500;transition:transform .22s cubic-bezier(.34,1.56,.64,1);z-index:100;white-space:nowrap;pointer-events:none;box-shadow:var(--shadow-md)}
 .toast.show{transform:translateX(-50%) translateY(0)}
@@ -459,6 +477,12 @@ textarea.input{resize:none;min-height:84px}
   <div class="hero">
     <div class="hero-amount" id="hero-amount">$0.00</div>
     <div class="hero-sub" id="hero-sub">spent this month</div>
+  </div>
+
+  <!-- Income section -->
+  <div class="income-section">
+    <div class="section-label" style="margin-bottom:8px">Monthly Income</div>
+    <div class="income-cards" id="income-cards"></div>
   </div>
 
   <!-- Summary content -->
@@ -868,7 +892,7 @@ function init(){
   const t=new Date();
   setDateLabel(dateFromOffset(0));
   curM=t.getMonth()+1;curY=t.getFullYear();
-  updateMonthDisplay();renderSummary();
+  updateMonthDisplay();renderSummary();renderIncome();
   renderBankDrop();
   document.addEventListener('click',(e)=>{
     const dd=id('date-drop');
@@ -887,7 +911,64 @@ function updateMonthDisplay(){
 function changeMonth(d){
   curM+=d;
   if(curM>12){curM=1;curY++;}if(curM<1){curM=12;curY--;}
-  updateMonthDisplay();renderSummary();
+  updateMonthDisplay();renderSummary();renderIncome();
+}
+
+// ── Income ──
+const INCOME_BANKS=[
+  {id:'mc',  label:'Merc: Cheo', name:'Cheo · Mercantil', color:'#1B6EE4'},
+  {id:'mcp', label:'Merc: Papa', name:'Papa · Mercantil', color:'#1B6EE4'},
+];
+function incomeKey(bankId){return`fet_inc_${curY}_${String(curM).padStart(2,'0')}_${bankId}`;}
+function getIncome(bankId){return parseFloat(localStorage.getItem(incomeKey(bankId))||'0');}
+function setIncome(bankId,amt){localStorage.setItem(incomeKey(bankId),amt);}
+
+function renderIncome(){
+  const wrap=id('income-cards');if(!wrap)return;
+  wrap.innerHTML='';
+  INCOME_BANKS.forEach(bank=>{
+    const amt=getIncome(bank.id);
+    const card=document.createElement('div');
+    card.className='income-card';
+    card.id='ic-'+bank.id;
+    card.innerHTML=`
+      <div class="income-card-top">
+        <div class="income-card-dot" style="background:${bank.color}">${bank.id==='mc'?'CH':'PA'}</div>
+        <div class="income-card-name">${bank.name}</div>
+      </div>
+      <div class="income-card-amt" id="ic-amt-${bank.id}">Bs. ${amt>0?fmt(amt):'—'}</div>
+      <div class="income-card-cur">VES · ${MONTHS[curM-1]}</div>
+      <div class="income-edit-wrap" id="ic-edit-${bank.id}">
+        <input class="income-edit-input" id="ic-inp-${bank.id}" type="number" placeholder="0" min="0" step="1" value="${amt||''}">
+        <div class="income-edit-actions">
+          <button class="income-save-btn" onclick="saveIncome('${bank.id}')">Save</button>
+          <button class="income-cancel-btn" onclick="closeIncomeEdit('${bank.id}')">Cancel</button>
+        </div>
+      </div>
+    `;
+    card.onclick=(e)=>{
+      if(e.target.closest('.income-edit-wrap'))return;
+      openIncomeEdit(bank.id);
+    };
+    wrap.appendChild(card);
+  });
+}
+function openIncomeEdit(bankId){
+  INCOME_BANKS.forEach(b=>closeIncomeEdit(b.id));
+  const wrap=id('ic-edit-'+bankId);
+  if(wrap){wrap.classList.add('open');id('ic-inp-'+bankId).focus();}
+}
+function closeIncomeEdit(bankId){
+  const wrap=id('ic-edit-'+bankId);
+  if(wrap)wrap.classList.remove('open');
+}
+function saveIncome(bankId){
+  const val=parseFloat(id('ic-inp-'+bankId).value)||0;
+  setIncome(bankId,val);
+  closeIncomeEdit(bankId);
+  const amtEl=id('ic-amt-'+bankId);
+  if(amtEl)amtEl.textContent=`Bs. ${val>0?fmt(val):'—'}`;
+  toast(`✓ Income saved`);
 }
 
 // ── Drawer ──
